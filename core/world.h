@@ -14,6 +14,9 @@
 #include "./chunk.h"
 #include "./block.h"
 
+// NB: As it stands, World assumes that the world is only one chunk high
+// (Chunk, however, assumes it can have neighbours in any direction)
+
 class World {
 
 public:
@@ -79,33 +82,6 @@ public:
         }
 
         drawList.clear();
-
-    }
-
-    // getting a nullptr as a return value means the chunk isn't currently loaded
-    // or is outside the bounds of the world
-    Chunk* getChunk(const glm::vec3& position) const {
-
-        return getChunk(floor(position.x / Chunk::CHUNK_SIZE_X),
-                        floor(position.y / Chunk::CHUNK_SIZE_Y),
-                        floor(position.z / Chunk::CHUNK_SIZE_Z) );
-
-    }
-
-    // getting a nullptr means the block is part of a chunk that isn't loaded 
-    // or is outside the bounds of the world
-    Block* getBlock(const glm::vec3& position) const {
-
-        glm::ivec3 chunkIndex = glm::ivec3(
-                floor(position.x / Chunk::CHUNK_SIZE_X),
-                floor(position.y / Chunk::CHUNK_SIZE_Y),
-                floor(position.z / Chunk::CHUNK_SIZE_Z) );
-        Chunk* chunk = getChunk(chunkIndex.x, chunkIndex.y, chunkIndex.z);
-        if (chunk == nullptr) { return nullptr; }
-
-        return &chunk->blocks[static_cast<int>(floor(position.x - chunkIndex.x * Chunk::CHUNK_SIZE_X))]
-                                [static_cast<int>(floor(position.y - chunkIndex.y * Chunk::CHUNK_SIZE_Y))]
-                                [static_cast<int>(floor(position.z - chunkIndex.z * Chunk::CHUNK_SIZE_Z))];
 
     }
 
