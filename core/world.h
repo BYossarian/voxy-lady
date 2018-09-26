@@ -2,7 +2,7 @@
 #pragma once
 
 #include <tuple>
-#include <map>
+#include <unordered_map>
 #include <math.h>
 #include <algorithm>
 
@@ -34,7 +34,9 @@ public:
 
     World(): noise(1234) {
 
-        drawList.reserve(std::pow(OUTER_RADIUS + 1, 2));
+        int maxNumChunks = std::pow(OUTER_RADIUS + 1, 2);
+
+        drawList.reserve(maxNumChunks);
 
     }
 
@@ -64,14 +66,13 @@ public:
         // center of the chunks will be the chunk's position + Chunk::CHUNK_SIZE_X / 2.0 etc. 
         // we can do the + Chunk::CHUNK_SIZE_X bit here to avoid repeating it for each chunk:
         float offsetCameraX = camera.getPosition().x - Chunk::CHUNK_SIZE_X / 2.0;
-        float offsetCameraY = camera.getPosition().y - Chunk::CHUNK_SIZE_Y / 2.0;
         float offsetCameraZ = camera.getPosition().z - Chunk::CHUNK_SIZE_Z / 2.0;
 
         for (auto const& [key, chunk] : chunks) {
             if (camera.canSee(chunk->getAABB()) && chunk->hasMesh()) {
                 const glm::vec3& chunkPos = chunk->getPosition();
                 drawList.emplace_back(chunk, 
-                    std::pow(chunkPos.x - offsetCameraX, 2) + std::pow(chunkPos.y - offsetCameraY, 2) + std::pow(chunkPos.z - offsetCameraZ, 2));
+                    std::pow(chunkPos.x - offsetCameraX, 2) + std::pow(chunkPos.z - offsetCameraZ, 2));
             }
         }
 
@@ -95,7 +96,21 @@ private:
         int distanceSquared;
     };
 
-    std::map<std::tuple<int, int, int>, Chunk*> chunks;
+    // in order to use std::unordered_map with std::pair as a key, we need to 
+    // create our own hash function
+    // https://stackoverflow.com/a/20602159/1937302
+    // https://stackoverflow.com/a/27952689/1937302
+    struct hashPair {
+        template <typename T, typename U>
+        std::size_t operator()(const std::pair<T, U> &x) const {
+            std::size_t lhs = std::hash<T>()(x.first);
+            std::size_t rhs = std::hash<U>()(x.second);
+            lhs ^= rhs + 0x9e3779b97f4a7c15 + (lhs << 6) + (lhs >> 2);
+            return lhs;
+        }
+    };
+
+    std::unordered_map<std::pair<int, int>, Chunk*, hashPair> chunks;
     PerlinNoise noise;
     std::vector<VisibleChunk> drawList;
 
@@ -121,7 +136,7 @@ private:
                     // TODO: check that chunk is actually within radius? YES
 
                     // TODO: would be quicker to use map.count?
-                    if (getChunk(i, 0, k) != nullptr) {
+                    if (getChunk(i, k) != nullptr) {
                         // chunk already exists
                         continue;
                     }
@@ -160,9 +175,7 @@ private:
                         }
                     }
 
-                    chunks.insert(
-                        std::map<std::tuple<int, int, int>, Chunk*>::value_type(std::make_tuple(i, 0, k), 
-                        chunk ));
+                    chunks.insert({ std::make_pair(i, k), chunk });
 
                 }
         }
@@ -174,12 +187,12 @@ private:
             // TODO: chunk status...
             if (chunk->vertices.size() != 0) { continue; }
             Chunk::Neighbourhood neighbourhood {
-                getChunk(std::get<0>(key) - 1, std::get<1>(key), std::get<2>(key)), // left
-                getChunk(std::get<0>(key) + 1, std::get<1>(key), std::get<2>(key)), // right
+                getChunk(key.first - 1, key.second), // left
+                getChunk(key.first + 1, key.second), // right
                 nullptr, // top
                 nullptr, // bottom
-                getChunk(std::get<0>(key), std::get<1>(key), std::get<2>(key) + 1), // front
-                getChunk(std::get<0>(key), std::get<1>(key), std::get<2>(key) - 1)  // back
+                getChunk(key.first, key.second + 1), // front
+                getChunk(key.first, key.second - 1)  // back
             };
             chunk->initMesh(neighbourhood);
         }
@@ -199,11 +212,10 @@ private:
 
         for (auto it = chunks.cbegin(); it != chunks.cend(); ) {
 
-            std::tuple<int, int, int> key = it->first;
+            std::pair<int, int> key = it->first;
             
-            if (std::get<0>(key) >= minI && std::get<0>(key) <= maxI &&
-                std::get<1>(key) == 0 &&
-                std::get<2>(key) >= minK && std::get<2>(key) <= maxK) {
+            if (key.first >= minI && key.first <= maxI &&
+                key.second >= minK && key.second <= maxK) {
                 
                     ++it;
                     continue;
@@ -217,9 +229,9 @@ private:
 
     }
 
-    Chunk* getChunk(int i, int j, int k) const {
+    Chunk* getChunk(int i, int k) const {
 
-        auto search = chunks.find(std::make_tuple(i, j, k));
+        auto search = chunks.find(std::make_pair(i, k));
         if (search == chunks.end()) {
             return nullptr;
         }
