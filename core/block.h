@@ -1,11 +1,7 @@
 
 #pragma once
 
-#include <map>
-
 struct Block {
-    
-    enum class Type { AIR = 0, GRASS = 1, DIRT = 2, ROCK = 3, SAND = 4, WATER = 5 };
 
     struct Properties {
         bool visible;
@@ -18,11 +14,12 @@ struct Block {
         int bottomTexture;
     };
 
-    Type type;
-
-    const Properties& getProperties() const { return properties[static_cast<int>(type)]; }
-
-private:
+    static constexpr int AIR = 0;
+    static constexpr int GRASS = 1;
+    static constexpr int DIRT = 2;
+    static constexpr int ROCK = 3;
+    static constexpr int SAND = 4;
+    static constexpr int WATER = 5;
 
     static constexpr Properties properties[] = {
         { false, false, -1, -1, -1, -1, -1, -1 },
@@ -32,5 +29,7 @@ private:
         { true, true, 40, 40, 40, 40, 40, 40 },
         { true, true, 356, 356, 356, 356, 356, 356 }
     };
+
+    int type;
 
 };

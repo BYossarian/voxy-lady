@@ -9,6 +9,7 @@
 #include "../libs/shader.h"
 #include "../libs/perlin.h"
 #include "../libs/aabb.h"
+#include "../libs/timer.h"
 #include "./block.h"
 
 const int FLOATS_PER_VERTEX = 9;
@@ -96,9 +97,9 @@ public:
         Chunk* back;
     };
 
-    static const int CHUNK_SIZE_X = 16;
-    static const int CHUNK_SIZE_Y = 256;
-    static const int CHUNK_SIZE_Z = 16;
+    static constexpr int CHUNK_SIZE_X = 16;
+    static constexpr int CHUNK_SIZE_Y = 256;
+    static constexpr int CHUNK_SIZE_Z = 16;
 
     Chunk(glm::ivec3 position): 
         position(position), 
@@ -128,9 +129,15 @@ public:
 
     void initMesh(const Neighbourhood& neighbourhood) {
 
+        //Timer timer{};
+
         vertices.reserve(overestimateFaces() * FLOATS_PER_FACE);
 
+        //timer.printTime("initMesh A");
+
         buildMesh(neighbourhood);
+
+        //timer.printTime("initMesh B");
 
         glBindVertexArray(VAO);
 
@@ -149,6 +156,8 @@ public:
         glEnableVertexAttribArray(2);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        //timer.printTime("initMesh C");
 
     }
 
@@ -178,7 +187,7 @@ private:
     AABB boundingBox;
 
     // this will over-estimate the number of faces (it assumes that any chunk <-> boundary will require a face)
-    // but with the result that it's much quicker to run
+    // but with the result that it's quicker to run
     int overestimateFaces() const {
 
         int numFaces = 0;
@@ -186,25 +195,25 @@ private:
         for (int x = 0; x < CHUNK_SIZE_X; x++) {
             for (int y = 0; y < CHUNK_SIZE_Y; y++) {
                 for (int z = 0; z < CHUNK_SIZE_Z; z++) {
-                    if (!blocks[x][y][z].getProperties().visible) {
+                    if (!Block::properties[blocks[x][y][z].type].visible) {
                         continue;
                     }
-                    if (x == 0 || !blocks[x-1][y][z].getProperties().visible) {
+                    if (x == 0 || !Block::properties[blocks[x-1][y][z].type].visible) {
                         numFaces++;
                     }
-                    if (x == CHUNK_SIZE_X - 1 || !blocks[x+1][y][z].getProperties().visible) {
+                    if (x == CHUNK_SIZE_X - 1 || !Block::properties[blocks[x+1][y][z].type].visible) {
                         numFaces++;
                     }
-                    if (y == 0 || !blocks[x][y-1][z].getProperties().visible) {
+                    if (y == 0 || !Block::properties[blocks[x][y-1][z].type].visible) {
                         numFaces++;
                     }
-                    if (y == CHUNK_SIZE_Y - 1 || !blocks[x][y+1][z].getProperties().visible) {
+                    if (y == CHUNK_SIZE_Y - 1 || !Block::properties[blocks[x][y+1][z].type].visible) {
                         numFaces++;
                     }
-                    if (z == 0 || !blocks[x][y][z-1].getProperties().visible) {
+                    if (z == 0 || !Block::properties[blocks[x][y][z-1].type].visible) {
                         numFaces++;
                     }
-                    if (z == CHUNK_SIZE_Z - 1 || !blocks[x][y][z+1].getProperties().visible) {
+                    if (z == CHUNK_SIZE_Z - 1 || !Block::properties[blocks[x][y][z+1].type].visible) {
                         numFaces++;
                     }
                 }
@@ -232,13 +241,11 @@ private:
 
     void buildMesh(const Neighbourhood& neighbourhood) {
 
-        // REVIEW: get block properties via array for better performance?
-
         for (int x = 0; x < CHUNK_SIZE_X; x++) {
             for (int y = 0; y < CHUNK_SIZE_Y; y++) {
                 for (int z = 0; z < CHUNK_SIZE_Z; z++) {
 
-                    const Block::Properties &block = blocks[x][y][z].getProperties();
+                    const Block::Properties &block = Block::properties[blocks[x][y][z].type];
 
                     if (!block.visible) { continue; }
 
@@ -246,7 +253,7 @@ private:
                         addFace(left, x, y, z, block.leftTexture);
                     } else {
                         Block leftNeighbour = (x == 0 ? neighbourhood.left->blocks[CHUNK_SIZE_X-1][y][z] : blocks[x-1][y][z]);
-                        if (!leftNeighbour.getProperties().visible) {
+                        if (!Block::properties[leftNeighbour.type].visible) {
                             addFace(left, x, y, z, block.leftTexture);
                         }
                     }
@@ -255,7 +262,7 @@ private:
                         addFace(right, x, y, z, block.rightTexture);
                     } else {
                         Block rightNeighbour = (x == CHUNK_SIZE_X - 1 ? neighbourhood.right->blocks[0][y][z] : blocks[x+1][y][z]);
-                        if (!rightNeighbour.getProperties().visible) {
+                        if (!Block::properties[rightNeighbour.type].visible) {
                             addFace(right, x, y, z, block.rightTexture);
                         }
                     }
@@ -264,7 +271,7 @@ private:
                         addFace(bottom, x, y, z, block.bottomTexture);
                     } else {
                         Block bottomNeighbour = (y == 0 ? neighbourhood.bottom->blocks[x][CHUNK_SIZE_Y-1][z] : blocks[x][y-1][z]);
-                        if (!bottomNeighbour.getProperties().visible) {
+                        if (!Block::properties[bottomNeighbour.type].visible) {
                             addFace(bottom, x, y, z, block.bottomTexture);
                         }
                     }
@@ -273,7 +280,7 @@ private:
                         addFace(top, x, y, z, block.topTexture);
                     } else {
                         Block topNeighbour = (y == CHUNK_SIZE_Y - 1 ? neighbourhood.top->blocks[x][0][z] : blocks[x][y+1][z]);
-                        if (!topNeighbour.getProperties().visible) {
+                        if (!Block::properties[topNeighbour.type].visible) {
                             addFace(top, x, y, z, block.topTexture);
                         }
                     }
@@ -282,7 +289,7 @@ private:
                         addFace(back, x, y, z, block.backTexture);
                     } else {
                         Block backNeighbour = (z == 0 ? neighbourhood.back->blocks[x][y][CHUNK_SIZE_Z-1] : blocks[x][y][z-1]);
-                        if (!backNeighbour.getProperties().visible) {
+                        if (!Block::properties[backNeighbour.type].visible) {
                             addFace(back, x, y, z, block.backTexture);
                         }
                     }
@@ -291,7 +298,7 @@ private:
                         addFace(front, x, y, z, block.frontTexture);
                     } else {
                         Block frontNeighbour = (z == CHUNK_SIZE_Z - 1 ? neighbourhood.front->blocks[x][y][0] : blocks[x][y][z+1]);
-                        if (!frontNeighbour.getProperties().visible) {
+                        if (!Block::properties[frontNeighbour.type].visible) {
                             addFace(front, x, y, z, block.frontTexture);
                         }
                     }

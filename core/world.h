@@ -11,8 +11,10 @@
 #include "../libs/perlin.h"
 #include "../libs/camera.h"
 #include "../libs/aabb.h"
+#include "../libs/timer.h"
 #include "./chunk.h"
 #include "./block.h"
+
 
 // NB: As it stands, World assumes that the world is only one chunk high
 // (Chunk, however, assumes it can have neighbours in any direction)
@@ -27,8 +29,8 @@ public:
     // (this is to prevent lots of loading/unloading that would 
     // occur if there were a single barrier that was being crossed
     // a lot)
-    static const int INNER_RADIUS = 16;
-    static const int OUTER_RADIUS = INNER_RADIUS + 1;
+    static constexpr int INNER_RADIUS = 16;
+    static constexpr int OUTER_RADIUS = INNER_RADIUS + 1;
 
     World(): noise(1234) {
 
@@ -100,27 +102,26 @@ private:
     void buildChunks(const glm::vec3 &position) {
 
         int minI = static_cast<int>(floor(position.x / Chunk::CHUNK_SIZE_X)) - INNER_RADIUS;
-        int minJ = 0;//static_cast<int>(floor(position.y / Chunk::CHUNK_SIZE_Y)) - INNER_RADIUS;
         int minK = static_cast<int>(floor(position.z / Chunk::CHUNK_SIZE_Z)) - INNER_RADIUS;
         int maxI = static_cast<int>(ceil(position.x / Chunk::CHUNK_SIZE_X)) + INNER_RADIUS;
-        int maxJ = 1;//static_cast<int>(ceil(position.y / Chunk::CHUNK_SIZE_Y)) + INNER_RADIUS;
         int maxK = static_cast<int>(ceil(position.z / Chunk::CHUNK_SIZE_Z)) + INNER_RADIUS;
 
         // TODO: are these min/max right?
 
+        Timer timer{};
+
         for (int i = minI; i < maxI; i++) {
-            for (int j = minJ; j < maxJ; j++) {
                 for (int k = minK; k < maxK; k++) {
 
                     glm::ivec3 chunkPosition = glm::ivec3(
                         i * Chunk::CHUNK_SIZE_X, 
-                        j * Chunk::CHUNK_SIZE_Y,
+                        0,
                         k * Chunk::CHUNK_SIZE_Z );
 
                     // TODO: check that chunk is actually within radius? YES
 
                     // TODO: would be quicker to use map.count?
-                    if (getChunk(i, j, k) != nullptr) {
+                    if (getChunk(i, 0, k) != nullptr) {
                         // chunk already exists
                         continue;
                     }
@@ -142,16 +143,16 @@ private:
                                 int worldY = y + chunkPosition.y;
 
                                 if (worldY <= rockHeight) {
-                                    chunk->blocks[x][y][z].type = Block::Type::ROCK;
+                                    chunk->blocks[x][y][z].type = Block::ROCK;
                                 } else {
                                     if (worldY == topSoilHeight) {
-                                        chunk->blocks[x][y][z].type = Block::Type::GRASS;
+                                        chunk->blocks[x][y][z].type = Block::GRASS;
                                     } else if (worldY < topSoilHeight) {
-                                        chunk->blocks[x][y][z].type = Block::Type::DIRT;
+                                        chunk->blocks[x][y][z].type = Block::DIRT;
                                     } else if (worldY < waterLevel) {
-                                        chunk->blocks[x][y][z].type = Block::Type::WATER;
+                                        chunk->blocks[x][y][z].type = Block::WATER;
                                     } else {
-                                        chunk->blocks[x][y][z].type = Block::Type::AIR;
+                                        chunk->blocks[x][y][z].type = Block::AIR;
                                     }
                                 }
 
@@ -160,12 +161,14 @@ private:
                     }
 
                     chunks.insert(
-                        std::map<std::tuple<int, int, int>, Chunk*>::value_type(std::make_tuple(i, j, k), 
+                        std::map<std::tuple<int, int, int>, Chunk*>::value_type(std::make_tuple(i, 0, k), 
                         chunk ));
 
                 }
-            }
         }
+
+        timer.printTime("world gen");
+        timer.reset();
 
         for (auto const& [key, chunk] : chunks) {
             // TODO: chunk status...
@@ -173,23 +176,23 @@ private:
             Chunk::Neighbourhood neighbourhood {
                 getChunk(std::get<0>(key) - 1, std::get<1>(key), std::get<2>(key)), // left
                 getChunk(std::get<0>(key) + 1, std::get<1>(key), std::get<2>(key)), // right
-                getChunk(std::get<0>(key), std::get<1>(key) + 1, std::get<2>(key)), // top
-                getChunk(std::get<0>(key), std::get<1>(key) - 1, std::get<2>(key)), // bottom
+                nullptr, // top
+                nullptr, // bottom
                 getChunk(std::get<0>(key), std::get<1>(key), std::get<2>(key) + 1), // front
                 getChunk(std::get<0>(key), std::get<1>(key), std::get<2>(key) - 1)  // back
             };
             chunk->initMesh(neighbourhood);
         }
 
+        timer.printTime("meshes built");
+
     }
 
     void freeChunks(const glm::vec3 &position) {
 
         int minI = static_cast<int>(floor(position.x / Chunk::CHUNK_SIZE_X)) - OUTER_RADIUS;
-        int minJ = 0;//static_cast<int>(floor(position.y / Chunk::CHUNK_SIZE_Y)) - INNER_RADIUS;
         int minK = static_cast<int>(floor(position.z / Chunk::CHUNK_SIZE_Z)) - OUTER_RADIUS;
         int maxI = static_cast<int>(ceil(position.x / Chunk::CHUNK_SIZE_X)) + OUTER_RADIUS;
-        int maxJ = 1;//static_cast<int>(ceil(position.y / Chunk::CHUNK_SIZE_Y)) + INNER_RADIUS;
         int maxK = static_cast<int>(ceil(position.z / Chunk::CHUNK_SIZE_Z)) + OUTER_RADIUS;
 
         // TODO: are these min/max right?
@@ -199,7 +202,7 @@ private:
             std::tuple<int, int, int> key = it->first;
             
             if (std::get<0>(key) >= minI && std::get<0>(key) <= maxI &&
-                std::get<1>(key) >= minJ && std::get<1>(key) <= maxJ &&
+                std::get<1>(key) == 0 &&
                 std::get<2>(key) >= minK && std::get<2>(key) <= maxK) {
                 
                     ++it;

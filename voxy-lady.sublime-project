@@ -8,15 +8,15 @@
     "build_systems":
     [
         {
-            "name": "OpenGL Build",
+            "name": "Voxy Lady Build",
             "shell_cmd": "g++ -std=c++17 -framework OpenGL -Ilibs/include -lglfw -lassimp \"${file_path}/libs/src/glad.c\" \"${file}\" -o \"${file_path}/build/${file_base_name}\"",
             "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
             "working_dir": "${file_path}",
             "selector": "source.c99, source.c++"
         },
         {
-            "name": "OpenGL Build & Run",
-            "shell_cmd": "g++ -std=c++17 -framework OpenGL -Ilibs/include -lglfw -lassimp \"${file_path}/libs/src/glad.c\" \"${file}\" -o \"${file_path}/build/${file_base_name}\" && \"${file_path}/build/${file_base_name}\"",
+            "name": "Voxy Lady Optimised Build",
+            "shell_cmd": "g++ -O3 -std=c++17 -framework OpenGL -Ilibs/include -lglfw -lassimp \"${file_path}/libs/src/glad.c\" \"${file}\" -o \"${file_path}/build/${file_base_name}\"",
             "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
             "working_dir": "${file_path}",
             "selector": "source.c99, source.c++"

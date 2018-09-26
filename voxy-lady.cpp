@@ -77,15 +77,12 @@ int main() {
         lastUpdateTime = now;
 
         {
+            
             Timer timer{};
 
             world->update(camera.getPosition());
 
-            auto timeTaken = timer.getTicks();
-
-            if (timeTaken > 0) {
-                std::cout << "world update: " << timer.getTicks() << "\n";
-            }
+            timer.printTime("world update");
             
         }
 
