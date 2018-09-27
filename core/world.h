@@ -24,13 +24,14 @@ class World {
 public:
 
     // chunks will be loaded into the world when they are 
-    // within INNER_RADIUS distance of the camera; they will 
+    // within DRAW_RADIUS distance of the camera; they will 
     // be unloaded when they are outside OUTER_RADIUS of the camera
     // (this is to prevent lots of loading/unloading that would 
     // occur if there were a single barrier that was being crossed
     // a lot)
-    static constexpr int INNER_RADIUS = 16;
-    static constexpr int OUTER_RADIUS = INNER_RADIUS + 1;
+    static constexpr int DRAW_RADIUS = 16;
+    static constexpr int CREATE_RADIUS = DRAW_RADIUS + 1;
+    static constexpr int OUTER_RADIUS = CREATE_RADIUS + 1;
 
     World(): noise(1234) {
 
@@ -116,30 +117,31 @@ private:
 
     void buildChunks(const glm::vec3 &position) {
 
-        int minI = static_cast<int>(floor(position.x / Chunk::CHUNK_SIZE_X)) - INNER_RADIUS;
-        int minK = static_cast<int>(floor(position.z / Chunk::CHUNK_SIZE_Z)) - INNER_RADIUS;
-        int maxI = static_cast<int>(ceil(position.x / Chunk::CHUNK_SIZE_X)) + INNER_RADIUS;
-        int maxK = static_cast<int>(ceil(position.z / Chunk::CHUNK_SIZE_Z)) + INNER_RADIUS;
+        int currentI = std::floor(position.x / Chunk::CHUNK_SIZE_X);
+        int currentJ = std::floor(position.z / Chunk::CHUNK_SIZE_Z);
 
-        // TODO: are these min/max right?
+        int minI = currentI - CREATE_RADIUS;
+        int minJ = currentJ - CREATE_RADIUS;
+        int maxI = currentI + 1 + CREATE_RADIUS;
+        int maxJ = currentJ + 1 + CREATE_RADIUS;
 
         Timer timer{};
 
-        for (int i = minI; i < maxI; i++) {
-                for (int k = minK; k < maxK; k++) {
+        // create Chunks within required area:
+        for (int i = minI; i <= maxI; i++) {
+                for (int j = minJ; j <= maxJ; j++) {
+
+                    if (getChunk(i, j) != nullptr) {
+                        // chunk already exists
+                        continue;
+                    }
 
                     glm::ivec3 chunkPosition = glm::ivec3(
                         i * Chunk::CHUNK_SIZE_X, 
                         0,
-                        k * Chunk::CHUNK_SIZE_Z );
+                        j * Chunk::CHUNK_SIZE_Z );
 
-                    // TODO: check that chunk is actually within radius? YES
-
-                    // TODO: would be quicker to use map.count?
-                    if (getChunk(i, k) != nullptr) {
-                        // chunk already exists
-                        continue;
-                    }
+                    // TODO: check that chunk is actually within radius?
 
                     Chunk* chunk = new Chunk(chunkPosition);
                                             
@@ -175,7 +177,7 @@ private:
                         }
                     }
 
-                    chunks.insert({ std::make_pair(i, k), chunk });
+                    chunks.insert({ std::make_pair(i, j), chunk });
 
                 }
         }
@@ -183,18 +185,26 @@ private:
         timer.printTime("world gen");
         timer.reset();
 
+        // make sure all chunks within draw radius have a mesh:
         for (auto const& [key, chunk] : chunks) {
-            // TODO: chunk status...
-            if (chunk->vertices.size() != 0) { continue; }
-            Chunk::Neighbourhood neighbourhood {
-                getChunk(key.first - 1, key.second), // left
-                getChunk(key.first + 1, key.second), // right
-                nullptr, // top
-                nullptr, // bottom
-                getChunk(key.first, key.second + 1), // front
-                getChunk(key.first, key.second - 1)  // back
-            };
-            chunk->initMesh(neighbourhood);
+
+            if (chunk->hasMesh()) { continue; }
+
+            if (key.first > minI && key.first < maxI &&
+                key.second > minJ && key.second < maxJ) {
+                
+                    Chunk::Neighbourhood neighbourhood {
+                        getChunk(key.first - 1, key.second), // left
+                        getChunk(key.first + 1, key.second), // right
+                        nullptr, // top
+                        nullptr, // bottom
+                        getChunk(key.first, key.second + 1), // front
+                        getChunk(key.first, key.second - 1)  // back
+                    };
+                    chunk->initMesh(neighbourhood);
+
+            }
+
         }
 
         timer.printTime("meshes built");
@@ -203,19 +213,20 @@ private:
 
     void freeChunks(const glm::vec3 &position) {
 
-        int minI = static_cast<int>(floor(position.x / Chunk::CHUNK_SIZE_X)) - OUTER_RADIUS;
-        int minK = static_cast<int>(floor(position.z / Chunk::CHUNK_SIZE_Z)) - OUTER_RADIUS;
-        int maxI = static_cast<int>(ceil(position.x / Chunk::CHUNK_SIZE_X)) + OUTER_RADIUS;
-        int maxK = static_cast<int>(ceil(position.z / Chunk::CHUNK_SIZE_Z)) + OUTER_RADIUS;
+        int currentI = std::floor(position.x / Chunk::CHUNK_SIZE_X);
+        int currentJ = std::floor(position.z / Chunk::CHUNK_SIZE_Z);
 
-        // TODO: are these min/max right?
+        int minI = currentI - OUTER_RADIUS;
+        int minJ = currentJ - OUTER_RADIUS;
+        int maxI = currentI + 1 + OUTER_RADIUS;
+        int maxJ = currentJ + 1 + OUTER_RADIUS;
 
         for (auto it = chunks.cbegin(); it != chunks.cend(); ) {
 
             std::pair<int, int> key = it->first;
             
             if (key.first >= minI && key.first <= maxI &&
-                key.second >= minK && key.second <= maxK) {
+                key.second >= minJ && key.second <= maxJ) {
                 
                     ++it;
                     continue;
@@ -229,9 +240,9 @@ private:
 
     }
 
-    Chunk* getChunk(int i, int k) const {
+    Chunk* getChunk(int i, int j) const {
 
-        auto search = chunks.find(std::make_pair(i, k));
+        auto search = chunks.find(std::make_pair(i, j));
         if (search == chunks.end()) {
             return nullptr;
         }

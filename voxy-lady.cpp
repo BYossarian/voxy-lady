@@ -52,7 +52,7 @@ int main() {
 
         world->init(camera.getPosition());
 
-        std::cout << "world gen: " << timer.getTicks() << "\n";
+        std::cout << "initial world gen: " << timer.getTicks() << "\n";
     }
 
     // enable depth testing & face culling:
@@ -77,7 +77,7 @@ int main() {
         lastUpdateTime = now;
 
         {
-            
+
             Timer timer{};
 
             world->update(camera.getPosition());
