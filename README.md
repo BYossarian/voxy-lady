@@ -5,9 +5,8 @@ Voxel engine (more like boilerplate right now...)
 
 - performance
     - more performant mesh building
-    - better structure for storing chunks in world?
-    - multi-threaded
-    - object pool for chunks
+    - better structure for storing chunks in world? (see infinite-2d-array-view.h)
+    - object pool for chunks (see infinite-2d-array-view.h - use as chunk pool)
 
 - better world gen
     - biomes

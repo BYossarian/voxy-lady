@@ -13,6 +13,7 @@ public:
 
     WorldGen(): noise(1234) {}
 
+    // NB: this is thread-safe
     void operator()(const glm::ivec3 &chunkPosition, Block (&blocks)[CHUNK_SIZE_X][CHUNK_SIZE_Y][CHUNK_SIZE_Z]) const {
 
         for (int x = 0; x < CHUNK_SIZE_X; x++) {

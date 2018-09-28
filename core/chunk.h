@@ -8,7 +8,6 @@
 
 #include "../libs/shader.h"
 #include "../libs/aabb.h"
-#include "../helpers/timer.h"
 #include "./block.h"
 #include "./world-gen.h"
 
@@ -95,11 +94,16 @@ public:
         Chunk* back;
     };
 
+    // Chunks progress through a linear sequence of readiness:
     // UNINITIALISED - object has been constructed, but blocks haven't been built
-    // BLOCKS_BUILT - Blocks have been built, but there's no mesh
-    // MESH_BUILT - Blocks and local copy of the mesh has been built
+    // POSITIONED - chunk has been positioned
+    // BLOCKS_GENERATED - Blocks have been built, but there's no mesh
+    // MESH_GENERATED - Blocks and local copy of the mesh has been built
     // COMPLETE - Blocks and mesh built and mesh has been pushed to GPU
-    enum class Status { UNINITIALISED, BLOCKS_BUILT, MESH_BUILT, COMPLETE };
+    // (mostly, this has been seperated out in order to make multi-threading easier, and to allow 
+    // blocks to be generated before meshes so that when generating meshes we have all the blocks 
+    // in the Chunk's neighbours)
+    enum class Status { UNINITIALISED, POSITIONED, BLOCKS_GENERATED, MESH_GENERATED, COMPLETE };
 
     static constexpr int CHUNK_SIZE_X = 16;
     static constexpr int CHUNK_SIZE_Y = 256;
@@ -118,7 +122,11 @@ public:
 
     }
 
-    void init(const glm::ivec3 &initPosition, const WorldGen<CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z> &worldGen) {
+    void setPosition(const glm::ivec3 &initPosition) {
+
+        if (status != Status::UNINITIALISED) {
+            throw;
+        }
 
         position = initPosition;
 
@@ -131,21 +139,43 @@ public:
             static_cast<float>(position.z + CHUNK_SIZE_Z)
         };
 
-        worldGen(position, blocks);
-
-        status = Status::BLOCKS_BUILT;
+        status = Status::POSITIONED;
 
     }
 
-    const glm::ivec3& getPosition() const { return position; };
+    void generateBlocks(const WorldGen<CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z> &worldGen) {
 
-    const AABB& getAABB() const { return boundingBox; };
+        if (status != Status::POSITIONED) {
+            throw;
+        }
 
-    void initMesh(const Neighbourhood& neighbourhood) {
+        worldGen(position, blocks);
+
+        status = Status::BLOCKS_GENERATED;
+
+    }
+
+    // generates the local mesh:
+    void generateMesh(const Neighbourhood& neighbourhood) {
+
+        if (status != Status::BLOCKS_GENERATED) {
+            throw;
+        }
 
         vertices.reserve(overestimateFaces() * FLOATS_PER_FACE);
 
         buildMesh(neighbourhood);
+
+        status = Status::MESH_GENERATED;
+
+    }
+
+    // syncs the local mesh with the GPU:
+    void syncMesh() {
+
+        if (status != Status::MESH_GENERATED) {
+            throw;
+        }
 
         glBindVertexArray(VAO);
 
@@ -171,7 +201,7 @@ public:
 
     void render(const Shader &shader) const {
 
-        if (vertices.size() == 0) { return; }
+        if (status != Status::COMPLETE) { return; }
 
         glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(position));
         shader.setUniformMat4("model", model);
@@ -185,6 +215,10 @@ public:
     Status getStatus() const {
         return status;
     }
+
+    const glm::ivec3& getPosition() const { return position; };
+
+    const AABB& getAABB() const { return boundingBox; };
 
 private:
 
