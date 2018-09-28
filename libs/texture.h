@@ -16,13 +16,13 @@ public:
 
     void useTexture(GLenum textureUnit = GL_TEXTURE0);
 
+    // prevent copy and copy-assignment
+    Texture& operator=(const Texture&) = delete;
+    Texture(const Texture&) = delete;
+
 private:
     GLuint textureId;
     int width, height, bitDepth;
-
-    // prevent copy and copy-assignment
-    Texture& operator=(const Texture &other);
-    Texture(const Texture &other);
 
 };
 

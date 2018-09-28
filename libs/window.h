@@ -27,6 +27,10 @@ public:
     void swapBuffers() { glfwSwapBuffers(window); }
     void setSwapInterval(int interval) { glfwSwapInterval(interval); }
 
+    // prevent copy and copy-assignment
+    Window& operator=(const Window&) = delete;
+    Window(const Window&) = delete;
+
 private:
 
     GLFWwindow* window;
@@ -34,10 +38,6 @@ private:
     bool keys[1024];
     double currentMouseX, currentMouseY;
     double lastMouseX, lastMouseY;
-
-    // prevent copy and copy-assignment
-    Window& operator=(const Window &other);
-    Window(const Window &other);
 
     void handleKeyEvent(int key, int code, int action, int mode);
     void handleMouseMoveEvent(double x, double y);

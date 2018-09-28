@@ -93,6 +93,9 @@ public:
 
     }
 
+    World(const World&) = delete;
+    World& operator=(const World&) = delete;
+
 private:
 
     struct VisibleChunk {

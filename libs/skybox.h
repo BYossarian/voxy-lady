@@ -96,15 +96,15 @@ public:
 
     void render(const glm::mat4 &view);
 
+    // prevent copy and copy-assignment
+    SkyBox& operator=(const SkyBox&) = delete;
+    SkyBox(const SkyBox&) = delete;
+
 private:
 
     Shader shader;
     CubeMap cubemap;
     GLuint skyboxVBO, skyboxVAO;
-
-    // prevent copy and copy-assignment
-    SkyBox& operator=(const SkyBox &other);
-    SkyBox(const SkyBox &other);
 
 };
 

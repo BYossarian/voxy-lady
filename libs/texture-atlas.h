@@ -16,13 +16,13 @@ public:
 
     void useTextureAtlas(GLenum textureUnit = GL_TEXTURE0);
 
+    // prevent copy and copy-assignment
+    TextureAtlas& operator=(const TextureAtlas&) = delete;
+    TextureAtlas(const TextureAtlas&) = delete;
+
 private:
     GLuint textureId;
     int width, height, totalWidth, totalHeight, bitDepth;
-
-    // prevent copy and copy-assignment
-    TextureAtlas& operator=(const TextureAtlas &other);
-    TextureAtlas(const TextureAtlas &other);
 
 };
 

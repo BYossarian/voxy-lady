@@ -17,12 +17,12 @@ public:
 
     void useCubeMap(GLenum textureUnit = GL_TEXTURE0);
 
+    // prevent copy and copy-assignment
+    CubeMap& operator=(const CubeMap7) = delete;
+    CubeMap(const CubeMap&) = delete;
+
 private:
     GLuint textureId;
-
-    // prevent copy and copy-assignment
-    CubeMap& operator=(const CubeMap &other);
-    CubeMap(const CubeMap &other);
 
 };
 

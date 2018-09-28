@@ -50,6 +50,9 @@ public:
 
     }
 
+    WorldGen(const WorldGen&) = delete;
+    WorldGen& operator=(const WorldGen&) = delete;
+
 private:
 
     PerlinNoise noise;

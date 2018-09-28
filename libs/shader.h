@@ -35,12 +35,12 @@ public:
 
     void useShader();
 
+    // prevent copy and copy-assignment
+    Shader& operator=(const Shader&) = delete;
+    Shader(const Shader&) = delete;
+
 private:
     GLuint shaderProgramId;
-
-    // prevent copy and copy-assignment
-    Shader& operator=(const Shader &other);
-    Shader(const Shader &other);
 
     GLuint compileShader(const std::string &shaderCode, GLenum shaderType);
 

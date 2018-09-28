@@ -220,6 +220,9 @@ public:
 
     const AABB& getAABB() const { return boundingBox; };
 
+    Chunk(const Chunk&) = delete;
+    Chunk& operator=(const Chunk&) = delete;
+
 private:
 
     std::vector<float> vertices;

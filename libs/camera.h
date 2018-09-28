@@ -31,6 +31,10 @@ public:
     const glm::vec3& getPosition() const { return position; };
     const glm::vec3& getDirection() const { return front; };
 
+    // prevent copy and copy-assignment
+    Camera& operator=(const Camera&) = delete;
+    Camera(const Camera&) = delete;
+
 private:
 
     // limit the pitch to -89 -> 89 degrees
@@ -56,10 +60,6 @@ private:
     GLfloat nearPlaneDistance;
     GLfloat farPlaneDistance;
     AABB frustrumAABB;
-
-    // prevent copy and copy-assignment
-    Camera& operator=(const Camera &other);
-    Camera(const Camera &other);
 
     void updateDirectionVectors();
     void updateFrustrumAABB();

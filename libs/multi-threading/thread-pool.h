@@ -47,6 +47,9 @@ public:
         return threads.size();
     }
 
+    thread_pool(const thread_pool&) = delete;
+    thread_pool& operator=(const thread_pool&) = delete;
+
 private:
 
     std::vector<std::thread> threads;

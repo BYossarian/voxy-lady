@@ -72,6 +72,9 @@ public:
 
     }
 
+    threadsafe_queue(const threadsafe_queue&) = delete;
+    threadsafe_queue& operator=(const threadsafe_queue&) = delete;
+
 private:
 
     std::queue<T> data_queue;

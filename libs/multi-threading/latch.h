@@ -46,6 +46,9 @@ public:
 
     }
 
+    latch(const latch&) = delete;
+    latch& operator=(const latch&) = delete;
+
 private:
 
     std::atomic<int> counter;
