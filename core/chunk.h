@@ -8,7 +8,7 @@
 
 #include "../libs/shader.h"
 #include "../libs/aabb.h"
-#include "../libs/timer.h"
+#include "../helpers/timer.h"
 #include "./block.h"
 #include "./world-gen.h"
 

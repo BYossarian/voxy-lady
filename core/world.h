@@ -10,7 +10,7 @@
 
 #include "../libs/camera.h"
 #include "../libs/aabb.h"
-#include "../libs/timer.h"
+#include "../helpers/timer.h"
 #include "./chunk.h"
 #include "./block.h"
 #include "./world-gen.h"
@@ -23,12 +23,12 @@ class World {
 
 public:
 
-    // chunks will be loaded into the world when they are 
-    // within DRAW_RADIUS distance of the camera; they will 
-    // be unloaded when they are outside OUTER_RADIUS of the camera
-    // (this is to prevent lots of loading/unloading that would 
-    // occur if there were a single barrier that was being crossed
-    // a lot)
+    // chunks will be created and their blocks generated when they are 
+    // within CREATE_RADIUS. They will have their meshes generated when 
+    // they are within DRAW_RADIUS; and they will be freed when they are 
+    // outside OUTER_RADIUS:
+    // NB: radius is a bit of a misnomer as currently we're considering 
+    // these boundaries to be square:
     static constexpr int DRAW_RADIUS = 16;
     static constexpr int CREATE_RADIUS = DRAW_RADIUS + 1;
     static constexpr int OUTER_RADIUS = CREATE_RADIUS + 1;
@@ -135,8 +135,6 @@ private:
                         // chunk already exists
                         continue;
                     }
-
-                    // TODO: check that chunk is actually within radius?
 
                     Chunk* chunk = new Chunk();
                     chunk->init(glm::ivec3(i * Chunk::CHUNK_SIZE_X, 0, j * Chunk::CHUNK_SIZE_Z ), worldGen);

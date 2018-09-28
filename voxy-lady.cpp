@@ -13,7 +13,8 @@
 #include "./libs/shader.h"
 #include "./libs/texture-atlas.h"
 #include "./libs/read-file.h"
-#include "./libs/timer.h"
+#include "./helpers/timer.h"
+#include "./helpers/frame-counter.h"
 #include "./core/world.h"
 
 int main() {
@@ -52,7 +53,7 @@ int main() {
 
         world->init(camera.getPosition());
 
-        std::cout << "initial world gen: " << timer.getTicks() << "\n";
+        timer.printTime("initial world gen");
     }
 
     // enable depth testing & face culling:
@@ -61,8 +62,7 @@ int main() {
 
     double lastUpdateTime;
 
-    auto start = std::chrono::high_resolution_clock::now();
-    int frames = -30;
+    FrameCounter frameCounter{};
 
     // render loop
     while (!window.shouldWindowClose()) {
@@ -113,18 +113,13 @@ int main() {
 
         window.swapBuffers();
 
-        frames++;
-        if (frames == 0) {
-            start = std::chrono::high_resolution_clock::now();
-        }
-        
+        frameCounter.frame();
+
     }
 
     delete world;
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "fps: " << 1000 * frames / totalTime << std::endl;
+    std::cout << "overall fps: " << frameCounter.getTotalFPS() << std::endl;
 
     glfwTerminate();
 
