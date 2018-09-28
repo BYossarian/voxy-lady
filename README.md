@@ -1,26 +1,26 @@
 # voxy-lady
-Voxel engine
+Voxel engine (more like boilerplate right now...)
 
-*** short term:
+### short term todo:
+
+- performance
+    - more performant mesh building
+    - better structure for storing chunks in world?
+    - multi-threaded
+    - object pool for chunks
 
 - better world gen
-    - better structure for storing chunks in world
     - biomes
     - trees/plants/cactus
     - caves
     - clouds
-    - more performant
-    - multi-threaded
-    - object pool for chunks
-    - only build meshes once all neighbours have loaded block data: chunk status: FREE, BLOCKS_LOADED, MESH_BUILT
-        (can do this in a background thread)
 
 - improve shaders
-    - shadows
+    - shadows (cascaded shadow maps)
     - semi-transparent water
     - PBR
 
-*** long term:
+### long term todo:
 
 - need to update persceptive if window aspect ratio changes
 
