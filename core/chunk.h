@@ -7,10 +7,10 @@
 #include <glm/glm.hpp>
 
 #include "../libs/shader.h"
-#include "../libs/perlin.h"
 #include "../libs/aabb.h"
 #include "../libs/timer.h"
 #include "./block.h"
+#include "./world-gen.h"
 
 const int FLOATS_PER_VERTEX = 9;
 const int FLOATS_PER_FACE = 54;
@@ -84,8 +84,6 @@ const float right[] = {
 
 class Chunk {
 
-friend class World;
-
 public:
 
     struct Neighbourhood {
@@ -97,20 +95,17 @@ public:
         Chunk* back;
     };
 
+    // UNINITIALISED - object has been constructed, but blocks haven't been built
+    // BLOCKS_BUILT - Blocks have been built, but there's no mesh
+    // MESH_BUILT - Blocks and local copy of the mesh has been built
+    // COMPLETE - Blocks and mesh built and mesh has been pushed to GPU
+    enum class Status { UNINITIALISED, BLOCKS_BUILT, MESH_BUILT, COMPLETE };
+
     static constexpr int CHUNK_SIZE_X = 16;
     static constexpr int CHUNK_SIZE_Y = 256;
     static constexpr int CHUNK_SIZE_Z = 16;
 
-    Chunk(glm::ivec3 position): 
-        position(position), 
-        boundingBox{ 
-            static_cast<float>(position.x), 
-            static_cast<float>(position.x + CHUNK_SIZE_X),
-            static_cast<float>(position.y),
-            static_cast<float>(position.y + CHUNK_SIZE_Y),
-            static_cast<float>(position.z),
-            static_cast<float>(position.z + CHUNK_SIZE_Z)
-        } {
+    Chunk(): status(Status::UNINITIALISED) {
 
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
@@ -123,21 +118,34 @@ public:
 
     }
 
+    void init(const glm::ivec3 &initPosition, const WorldGen<CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z> &worldGen) {
+
+        position = initPosition;
+
+        boundingBox = {
+            static_cast<float>(position.x), 
+            static_cast<float>(position.x + CHUNK_SIZE_X),
+            static_cast<float>(position.y),
+            static_cast<float>(position.y + CHUNK_SIZE_Y),
+            static_cast<float>(position.z),
+            static_cast<float>(position.z + CHUNK_SIZE_Z)
+        };
+
+        worldGen(position, blocks);
+
+        status = Status::BLOCKS_BUILT;
+
+    }
+
     const glm::ivec3& getPosition() const { return position; };
 
     const AABB& getAABB() const { return boundingBox; };
 
     void initMesh(const Neighbourhood& neighbourhood) {
 
-        //Timer timer{};
-
         vertices.reserve(overestimateFaces() * FLOATS_PER_FACE);
 
-        //timer.printTime("initMesh A");
-
         buildMesh(neighbourhood);
-
-        //timer.printTime("initMesh B");
 
         glBindVertexArray(VAO);
 
@@ -157,7 +165,7 @@ public:
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        //timer.printTime("initMesh C");
+        status = Status::COMPLETE;
 
     }
 
@@ -174,8 +182,8 @@ public:
 
     }
 
-    bool hasMesh() const {
-        return vertices.size() != 0;
+    Status getStatus() const {
+        return status;
     }
 
 private:
@@ -185,6 +193,7 @@ private:
     GLuint VBO, VAO;
     glm::ivec3 position;
     AABB boundingBox;
+    Status status;
 
     // this will over-estimate the number of faces (it assumes that any chunk <-> boundary will require a face)
     // but with the result that it's quicker to run

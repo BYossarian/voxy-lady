@@ -8,12 +8,12 @@
 
 #include <glm/glm.hpp>
 
-#include "../libs/perlin.h"
 #include "../libs/camera.h"
 #include "../libs/aabb.h"
 #include "../libs/timer.h"
 #include "./chunk.h"
 #include "./block.h"
+#include "./world-gen.h"
 
 
 // NB: As it stands, World assumes that the world is only one chunk high
@@ -33,7 +33,7 @@ public:
     static constexpr int CREATE_RADIUS = DRAW_RADIUS + 1;
     static constexpr int OUTER_RADIUS = CREATE_RADIUS + 1;
 
-    World(): noise(1234) {
+    World() {
 
         int maxNumChunks = std::pow(OUTER_RADIUS + 1, 2);
 
@@ -70,7 +70,7 @@ public:
         float offsetCameraZ = camera.getPosition().z - Chunk::CHUNK_SIZE_Z / 2.0;
 
         for (auto const& [key, chunk] : chunks) {
-            if (camera.canSee(chunk->getAABB()) && chunk->hasMesh()) {
+            if (camera.canSee(chunk->getAABB()) && chunk->getStatus() == Chunk::Status::COMPLETE) {
                 const glm::vec3& chunkPos = chunk->getPosition();
                 drawList.emplace_back(chunk, 
                     std::pow(chunkPos.x - offsetCameraX, 2) + std::pow(chunkPos.z - offsetCameraZ, 2));
@@ -112,7 +112,7 @@ private:
     };
 
     std::unordered_map<std::pair<int, int>, Chunk*, hashPair> chunks;
-    PerlinNoise noise;
+    WorldGen<Chunk::CHUNK_SIZE_X, Chunk::CHUNK_SIZE_Y, Chunk::CHUNK_SIZE_Z> worldGen;
     std::vector<VisibleChunk> drawList;
 
     void buildChunks(const glm::vec3 &position) {
@@ -136,46 +136,10 @@ private:
                         continue;
                     }
 
-                    glm::ivec3 chunkPosition = glm::ivec3(
-                        i * Chunk::CHUNK_SIZE_X, 
-                        0,
-                        j * Chunk::CHUNK_SIZE_Z );
-
                     // TODO: check that chunk is actually within radius?
 
-                    Chunk* chunk = new Chunk(chunkPosition);
-                                            
-                    for (int x = 0; x < Chunk::CHUNK_SIZE_X; x++) {
-                        for (int z = 0; z < Chunk::CHUNK_SIZE_Z; z++) {
-
-                            const int topSoilHeight = 200 + 4 * noise.noise(static_cast<float>(x + chunkPosition.x) / Chunk::CHUNK_SIZE_X, static_cast<float>(z + chunkPosition.z) / Chunk::CHUNK_SIZE_Z, 1) 
-                                                    + 16 * noise.noise((static_cast<float>(x + chunkPosition.x) /  Chunk::CHUNK_SIZE_X) / 4, (static_cast<float>(z + chunkPosition.z) / Chunk::CHUNK_SIZE_Z) / 4, 1)
-                                                    + 32 * noise.noise((static_cast<float>(x + chunkPosition.x) /  Chunk::CHUNK_SIZE_X) / 8, (static_cast<float>(z + chunkPosition.z) / Chunk::CHUNK_SIZE_Z) / 8, 1);
-                            const int rockHeight = topSoilHeight - 14 + 2 * noise.noise(static_cast<float>(x + chunkPosition.x) / Chunk::CHUNK_SIZE_X, static_cast<float>(z + chunkPosition.z) / Chunk::CHUNK_SIZE_Z, 2) 
-                                                    + fmax(0, 18 * noise.noise((static_cast<float>(x + chunkPosition.x) /  Chunk::CHUNK_SIZE_X), (static_cast<float>(z + chunkPosition.z) / Chunk::CHUNK_SIZE_Z), 2));
-                            const int waterLevel = 219;
-                            
-                            for (int y = 0; y < Chunk::CHUNK_SIZE_Y; y++) {
-
-                                int worldY = y + chunkPosition.y;
-
-                                if (worldY <= rockHeight) {
-                                    chunk->blocks[x][y][z].type = Block::ROCK;
-                                } else {
-                                    if (worldY == topSoilHeight) {
-                                        chunk->blocks[x][y][z].type = Block::GRASS;
-                                    } else if (worldY < topSoilHeight) {
-                                        chunk->blocks[x][y][z].type = Block::DIRT;
-                                    } else if (worldY < waterLevel) {
-                                        chunk->blocks[x][y][z].type = Block::WATER;
-                                    } else {
-                                        chunk->blocks[x][y][z].type = Block::AIR;
-                                    }
-                                }
-
-                            }
-                        }
-                    }
+                    Chunk* chunk = new Chunk();
+                    chunk->init(glm::ivec3(i * Chunk::CHUNK_SIZE_X, 0, j * Chunk::CHUNK_SIZE_Z ), worldGen);
 
                     chunks.insert({ std::make_pair(i, j), chunk });
 
@@ -188,7 +152,10 @@ private:
         // make sure all chunks within draw radius have a mesh:
         for (auto const& [key, chunk] : chunks) {
 
-            if (chunk->hasMesh()) { continue; }
+            if (chunk->getStatus() == Chunk::Status::COMPLETE) {
+                // chunk already has a mesh
+                continue;
+            }
 
             if (key.first > minI && key.first < maxI &&
                 key.second > minJ && key.second < maxJ) {
