@@ -60,7 +60,7 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    double lastUpdateTime;
+    double lastUpdateTime = glfwGetTime();
 
     FrameCounter frameCounter{};
 
